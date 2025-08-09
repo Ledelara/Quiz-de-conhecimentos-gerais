@@ -1,27 +1,40 @@
 <template>
   <div>
-
     <ScoreBoard :playerScore="winCount" :computerScore="loseCount" />
+
     <template v-if="question">
       <h1 v-html="question"></h1>
 
       <template v-for="answer in answers" :key="answer">
-        <input 
+        <input
           :disabled="answerSubmited"
-          type="radio" 
-          name="options" 
-          :value="answer" 
+          type="radio"
+          name="options"
+          :value="answer"
           v-model="chosenAnswer"
         />
         <label>{{ answer }}</label><br />
       </template>
 
-      <button v-if="!answerSubmited" class="send" type="button" @click="submitAnswer()">Send</button>
+      <button
+        v-if="!answerSubmited"
+        class="send"
+        type="button"
+        @click="submitAnswer()"
+      >
+        Send
+      </button>
 
       <section v-if="answerSubmited" class="result">
-        <h4 v-if="chosenAnswer == correctAnswer" v-html="`&#9989; Congratulations, the answer ${correctAnswer} is correct!`"></h4>
+        <h4
+          v-if="chosenAnswer === correctAnswer"
+          v-html="`&#9989; Congratulations, the answer ${correctAnswer} is correct!`"
+        ></h4>
 
-        <h4 v-else v-html="`&#10060; I'm sorry, you picked the wrong answer. The correct answer is: ${correctAnswer}`"></h4>
+        <h4
+          v-else
+          v-html="`&#10060; I'm sorry, you picked the wrong answer. The correct answer is: ${correctAnswer}`"
+        ></h4>
         <button class="send" type="button" @click="getNewQuestion()">Next question</button>
       </section>
     </template>
@@ -29,67 +42,89 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
-import axios from 'axios'
-import ScoreBoard from './components/ScoreBoard.vue'
+import { defineComponent } from "vue";
+import axios from "axios";
+import ScoreBoard from "./components/ScoreBoard.vue";
+
+interface TriviaQuestion {
+  category: string;
+  type: string;
+  difficulty: string;
+  question: string;
+  correct_answer: string;
+  incorrect_answers: string[];
+}
+
+interface TriviaApiResponse {
+  response_code: number;
+  results: TriviaQuestion[];
+}
 
 export default defineComponent({
-  name: 'App',
+  name: "App",
   components: {
-    ScoreBoard
+    ScoreBoard,
   },
   data() {
     return {
-      question: '' as string,
+      question: "" as string,
       incorrectAnswers: [] as string[],
-      correctAnswer: '' as string,
-      chosenAnswer: '' as string,
+      correctAnswer: "" as string,
+      chosenAnswer: "" as string,
       answerSubmited: false as boolean,
       winCount: 0 as number,
-      loseCount: 0 as number
-    }
+      loseCount: 0 as number,
+    };
   },
   computed: {
-    answers() {
-      var answers = JSON.parse(JSON.stringify(this.incorrectAnswers))
-      answers.splice(Math.floor(Math.round(Math.random() * answers.length)), 0, this.correctAnswer)
+    answers(): string[] {
+      // Clonando o array para não modificar o original
+      const answers = [...this.incorrectAnswers];
+      // Inserindo a resposta correta em uma posição aleatória
+      const randomIndex = Math.floor(Math.random() * (answers.length + 1));
+      answers.splice(randomIndex, 0, this.correctAnswer);
       return answers;
-    }
+    },
   },
   methods: {
-    submitAnswer() {
-      if(!this.chosenAnswer) {
-        alert('Please select an answer!')
+    submitAnswer(): void {
+      if (!this.chosenAnswer) {
+        alert("Please select an answer!");
+        return;
+      }
+
+      this.answerSubmited = true;
+      if (this.chosenAnswer === this.correctAnswer) {
+        this.winCount++;
       } else {
-        this.answerSubmited = true
-        if (this.chosenAnswer == this.correctAnswer) {
-          this.winCount++;
-        } else {
-          this.loseCount++;
-        }
+        this.loseCount++;
       }
     },
 
-    getNewQuestion() {
-      this.answerSubmited = false
-      this.chosenAnswer = ''
-      this.question = ''
-      this.incorrectAnswers = []
-      this.correctAnswer = ''
+    getNewQuestion(): void {
+      this.answerSubmited = false;
+      this.chosenAnswer = "";
+      this.question = "";
+      this.incorrectAnswers = [];
+      this.correctAnswer = "";
 
-      axios.get('https://opentdb.com/api.php?amount=1')
-      .then((response: any) => {
-        const result = response.data.results[0]
-        this.question = result.question
-        this.incorrectAnswers = result.incorrect_answers
-        this.correctAnswer = result.correct_answer
-      })
-    }
+      axios
+        .get<TriviaApiResponse>("https://opentdb.com/api.php?amount=1")
+        .then((response) => {
+          const result = response.data.results[0];
+          this.question = result.question;
+          this.incorrectAnswers = result.incorrect_answers;
+          this.correctAnswer = result.correct_answer;
+        })
+        .catch((error) => {
+          console.error("Erro ao buscar pergunta:", error);
+        });
+    },
   },
   created() {
-    this.getNewQuestion()
-  }
-})
+    this.getNewQuestion();
+  },
+});
 </script>
 
 <style lang="scss">
@@ -102,7 +137,7 @@ export default defineComponent({
   margin: 60px auto;
   max-width: 960px;
 
-  input[type='radio'] {
+  input[type="radio"] {
     margin: 12px 4px;
   }
 
